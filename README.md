@@ -2,7 +2,7 @@
 
 A fully playable pass-and-play Mahjong game for 2–6 players on a single device.
 
-## [Play Now](https://nuvixstudio.github.io/mahjong-passandplay/)
+## [Play Now](https://nodesaint.github.io/mahjong-passandplay/)
 
 ## Features
 
