@@ -8,8 +8,11 @@ A fully playable pass-and-play Mahjong game for 2–6 players on a single device
 
 - 2–6 players, hot-seat pass-and-play
 - Full Mahjong rules: Chow, Pung, Kong, winning hand validation
+- Hand scoring with multiple win types (All Pungs, Full Flush, Half Flush, All Honours, etc.)
+- Optional bonus tiles (Flowers & Seasons)
 - Save/resume via copyable state codes — no server, no accounts
-- Mobile-first design with a felt-green tabletop aesthetic
+- Mobile-optimised: responsive tile sizing, horizontal hand scrolling, touch-friendly targets, safe area support for notched phones
+- Felt-green tabletop aesthetic with Google Fonts (Playfair Display, Noto Serif)
 
 ## Development
 
@@ -17,3 +20,11 @@ A fully playable pass-and-play Mahjong game for 2–6 players on a single device
 npm install
 npm run dev
 ```
+
+## Deploy
+
+```
+npm run build
+```
+
+Static files are output to `dist/` and deployed via GitHub Pages.
