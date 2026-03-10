@@ -2,6 +2,23 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { Copy, Check, ChevronDown, ChevronUp, Trophy, RotateCcw, Users, Eye, EyeOff, X, AlertTriangle } from "lucide-react";
 
 // ============================================================
+// MOBILE DETECTION HOOK
+// ============================================================
+
+function useIsMobile(breakpoint = 600) {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= breakpoint
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+// ============================================================
 // TILE DATA MODEL
 // ============================================================
 
@@ -729,13 +746,17 @@ function decodeState(code) {
 // ============================================================
 
 // --- Tile Component ---
-function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted }) {
+function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted, mobile }) {
+  // Tile sizes: small (melds/discards), normal (hand), adjusted for mobile
+  const w = small ? (mobile ? 28 : 32) : (mobile ? 38 : 44);
+  const h = small ? (mobile ? 38 : 44) : (mobile ? 52 : 60);
+
   if (faceDown) {
     return (
       <div
         style={{
-          width: small ? 32 : 44,
-          height: small ? 44 : 60,
+          width: w,
+          height: h,
           background: "linear-gradient(135deg, #1a5c3a 0%, #0d3320 100%)",
           borderRadius: 6,
           border: "2px solid #2d8a4e",
@@ -744,6 +765,7 @@ function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted 
           justifyContent: "center",
           margin: 2,
           boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+          flexShrink: 0,
         }}
       >
         <div
@@ -778,8 +800,8 @@ function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted 
     <div
       onClick={disabled ? undefined : onClick}
       style={{
-        width: small ? 32 : 44,
-        height: small ? 44 : 60,
+        width: w,
+        height: h,
         background: selected
           ? "linear-gradient(180deg, #fff8dc 0%, #f0e6b8 100%)"
           : "linear-gradient(180deg, #fefdf5 0%, #f0ead6 100%)",
@@ -793,7 +815,7 @@ function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted 
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        margin: 2,
+        margin: mobile ? 1 : 2,
         cursor: disabled ? "default" : onClick ? "pointer" : "default",
         boxShadow: selected
           ? "0 4px 12px rgba(201,169,78,0.5), 0 -1px 0 #fff inset"
@@ -803,11 +825,13 @@ function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted 
         position: "relative",
         opacity: disabled ? 0.5 : 1,
         userSelect: "none",
+        flexShrink: 0,
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       <span
         style={{
-          fontSize: small ? 16 : 22,
+          fontSize: small ? (mobile ? 14 : 16) : (mobile ? 18 : 22),
           fontWeight: 700,
           color: getTileColor(),
           lineHeight: 1.1,
@@ -833,17 +857,18 @@ function Tile({ tile, onClick, selected, faceDown, small, disabled, highlighted 
 }
 
 // --- Meld Display ---
-function MeldDisplay({ meld, small }) {
+function MeldDisplay({ meld, small, mobile }) {
   return (
     <div
       style={{
         display: "inline-flex",
         gap: 1,
-        margin: "0 4px",
+        margin: mobile ? "0 2px" : "0 4px",
         padding: "2px 4px",
         background: "rgba(0,0,0,0.1)",
         borderRadius: 6,
         alignItems: "flex-end",
+        flexShrink: 0,
       }}
     >
       {meld.tiles.map((t, i) => (
@@ -851,6 +876,7 @@ function MeldDisplay({ meld, small }) {
           key={t.id}
           tile={t}
           small={small}
+          mobile={mobile}
           faceDown={meld.concealed && i > 0 && i < meld.tiles.length - 1}
         />
       ))}
@@ -860,6 +886,7 @@ function MeldDisplay({ meld, small }) {
 
 // --- Lobby ---
 function Lobby({ onStart, onResume }) {
+  const mobile = useIsMobile();
   const [playerCount, setPlayerCount] = useState(4);
   const [names, setNames] = useState(["", "", "", "", "", ""]);
   const [includeBonuses, setIncludeBonuses] = useState(false);
@@ -899,7 +926,7 @@ function Lobby({ onStart, onResume }) {
           width: "100%",
           background: "rgba(255,255,255,0.05)",
           borderRadius: 16,
-          padding: 32,
+          padding: mobile ? 20 : 32,
           border: "1px solid rgba(201,169,78,0.3)",
         }}
       >
@@ -985,7 +1012,7 @@ function Lobby({ onStart, onResume }) {
                 border: "1px solid rgba(255,255,255,0.15)",
                 background: "rgba(0,0,0,0.2)",
                 color: "#f5f0e1",
-                fontSize: 15,
+                fontSize: 16,
                 fontFamily: "sans-serif",
                 outline: "none",
                 boxSizing: "border-box",
@@ -1171,6 +1198,7 @@ function TurnTransition({ playerName, onReveal }) {
 
 // --- Claim Modal ---
 function ClaimModal({ state, onClaim, onPass }) {
+  const mobile = useIsMobile();
   const { lastDiscard, lastDiscardPlayer, players } = state;
   const numPlayers = players.length;
   const [claims, setClaims] = useState({});
@@ -1260,7 +1288,7 @@ function ClaimModal({ state, onClaim, onPass }) {
               marginBottom: 20,
             }}
           >
-            <Tile tile={lastDiscard} highlighted />
+            <Tile tile={lastDiscard} highlighted mobile={mobile} />
           </div>
 
           {/* Show player's hand for chow selection */}
@@ -1472,7 +1500,7 @@ function ClaimModal({ state, onClaim, onPass }) {
             marginBottom: 16,
           }}
         >
-          <Tile tile={lastDiscard} highlighted />
+          <Tile tile={lastDiscard} highlighted mobile={mobile} />
         </div>
         <p
           style={{
@@ -1557,6 +1585,7 @@ function ClaimModal({ state, onClaim, onPass }) {
 
 // --- Score Summary ---
 function ScoreSummary({ state, scoreResult, onNextRound, onNewGame }) {
+  const mobile = useIsMobile();
   const winner = state.players[state.winner];
   return (
     <div
@@ -1577,6 +1606,8 @@ function ScoreSummary({ state, scoreResult, onNextRound, onNewGame }) {
           padding: 32,
           maxWidth: 440,
           width: "90%",
+          maxHeight: "90dvh",
+          overflowY: "auto",
           border: "1px solid rgba(201,169,78,0.5)",
           textAlign: "center",
         }}
@@ -1603,10 +1634,10 @@ function ScoreSummary({ state, scoreResult, onNextRound, onNewGame }) {
             }}
           >
             {winner.hand.map((t) => (
-              <Tile key={t.id} tile={t} small />
+              <Tile key={t.id} tile={t} small mobile={mobile} />
             ))}
             {winner.melds.map((m, mi) => (
-              <MeldDisplay key={mi} meld={m} small />
+              <MeldDisplay key={mi} meld={m} small mobile={mobile} />
             ))}
           </div>
         </div>
@@ -2007,6 +2038,7 @@ function Scoreboard({ players, onClose }) {
 // ============================================================
 
 export default function MahjongGame() {
+  const mobile = useIsMobile();
   const [gameState, setGameState] = useState(null);
   const [selectedTile, setSelectedTile] = useState(null);
   const [showScoreboard, setShowScoreboard] = useState(false);
@@ -2465,12 +2497,13 @@ export default function MahjongGame() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         background:
           "linear-gradient(180deg, #0d2818 0%, #1a3c2a 30%, #1a3c2a 70%, #0d2818 100%)",
         display: "flex",
         flexDirection: "column",
-        paddingBottom: 50,
+        paddingBottom: mobile ? 44 : 50,
+        overflowX: "hidden",
       }}
     >
       {/* Top Bar */}
@@ -2479,26 +2512,27 @@ export default function MahjongGame() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 16px",
+          padding: mobile ? "8px 10px" : "12px 16px",
+          paddingTop: mobile ? "calc(8px + env(safe-area-inset-top, 0px))" : "12px",
           background: "rgba(0,0,0,0.2)",
           borderBottom: "1px solid rgba(201,169,78,0.15)",
         }}
       >
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: mobile ? 8 : 16, alignItems: "center" }}>
           <span
             style={{
               color: "#c9a94e",
-              fontSize: 13,
+              fontSize: mobile ? 12 : 13,
               fontFamily: "'Noto Serif', serif",
             }}
           >
-            Round {state.round}
+            R{state.round}
           </span>
-          <span style={{ color: "#8fad96", fontSize: 12 }}>
-            {WINDS[state.prevailingWind]} Wind
+          <span style={{ color: "#8fad96", fontSize: mobile ? 11 : 12 }}>
+            {WINDS[state.prevailingWind]}
           </span>
-          <span style={{ color: "#8fad96", fontSize: 12 }}>
-            Wall: {state.wall.length}
+          <span style={{ color: "#8fad96", fontSize: mobile ? 11 : 12 }}>
+            {state.wall.length} left
           </span>
         </div>
         <button
@@ -2507,7 +2541,8 @@ export default function MahjongGame() {
             background: "rgba(201,169,78,0.15)",
             border: "1px solid rgba(201,169,78,0.3)",
             borderRadius: 6,
-            padding: "6px 12px",
+            padding: mobile ? "8px 12px" : "6px 12px",
+            minHeight: 44,
             color: "#c9a94e",
             cursor: "pointer",
             fontSize: 12,
@@ -2551,10 +2586,12 @@ export default function MahjongGame() {
       <div
         style={{
           display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          padding: "12px 16px",
-          justifyContent: "center",
+          flexWrap: mobile ? "nowrap" : "wrap",
+          gap: mobile ? 6 : 8,
+          padding: mobile ? "8px 10px" : "12px 16px",
+          justifyContent: mobile ? "flex-start" : "center",
+          overflowX: mobile ? "auto" : "visible",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {state.players.map((player, i) => {
@@ -2565,8 +2602,9 @@ export default function MahjongGame() {
               style={{
                 background: "rgba(0,0,0,0.2)",
                 borderRadius: 10,
-                padding: "8px 12px",
-                minWidth: 100,
+                padding: mobile ? "6px 8px" : "8px 12px",
+                minWidth: mobile ? 80 : 100,
+                flexShrink: 0,
                 border: "1px solid rgba(255,255,255,0.05)",
               }}
             >
@@ -2615,14 +2653,14 @@ export default function MahjongGame() {
                   }}
                 >
                   {player.melds.map((m, mi) => (
-                    <MeldDisplay key={mi} meld={m} small />
+                    <MeldDisplay key={mi} meld={m} small mobile={mobile} />
                   ))}
                 </div>
               )}
               {player.bonusTiles && player.bonusTiles.length > 0 && (
                 <div style={{ display: "flex", gap: 1, marginTop: 4 }}>
                   {player.bonusTiles.map((t) => (
-                    <Tile key={t.id} tile={t} small />
+                    <Tile key={t.id} tile={t} small mobile={mobile} />
                   ))}
                 </div>
               )}
@@ -2634,9 +2672,9 @@ export default function MahjongGame() {
       {/* Discard pool */}
       <div
         style={{
-          flex: 1,
-          padding: "8px 16px",
-          minHeight: 100,
+          flex: mobile ? "0 1 auto" : 1,
+          padding: mobile ? "6px 10px" : "8px 16px",
+          minHeight: mobile ? 60 : 100,
         }}
       >
         <div
@@ -2645,10 +2683,10 @@ export default function MahjongGame() {
             fontSize: 11,
             textTransform: "uppercase",
             letterSpacing: 1,
-            marginBottom: 6,
+            marginBottom: 4,
           }}
         >
-          Discards
+          Discards ({state.discardPool.length})
         </div>
         <div
           style={{
@@ -2657,12 +2695,15 @@ export default function MahjongGame() {
             gap: 2,
             background: "rgba(0,0,0,0.15)",
             borderRadius: 10,
-            padding: 8,
-            minHeight: 60,
+            padding: mobile ? 6 : 8,
+            minHeight: mobile ? 44 : 60,
+            maxHeight: mobile ? 120 : "none",
+            overflowY: mobile ? "auto" : "visible",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {state.discardPool.map((t, i) => (
-            <Tile key={`${t.id}-${i}`} tile={t} small />
+            <Tile key={`${t.id}-${i}`} tile={t} small mobile={mobile} />
           ))}
         </div>
       </div>
@@ -2670,7 +2711,8 @@ export default function MahjongGame() {
       {/* Current player area */}
       <div
         style={{
-          padding: "12px 16px",
+          padding: mobile ? "8px 10px" : "12px 16px",
+          paddingBottom: mobile ? "calc(8px + env(safe-area-inset-bottom, 0px))" : "12px",
           background: "rgba(0,0,0,0.25)",
           borderTop: "1px solid rgba(201,169,78,0.15)",
         }}
@@ -2682,6 +2724,8 @@ export default function MahjongGame() {
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: 8,
+            flexWrap: "wrap",
+            gap: mobile ? 6 : 8,
           }}
         >
           <div>
@@ -2689,7 +2733,7 @@ export default function MahjongGame() {
               style={{
                 color: "#c9a94e",
                 fontFamily: "'Noto Serif', serif",
-                fontSize: 16,
+                fontSize: mobile ? 14 : 16,
                 fontWeight: 600,
               }}
             >
@@ -2708,23 +2752,24 @@ export default function MahjongGame() {
               </span>
             )}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {canWin && (
               <button
                 onClick={handleDeclareWin}
                 style={{
-                  padding: "8px 16px",
+                  padding: mobile ? "10px 14px" : "8px 16px",
                   borderRadius: 8,
                   border: "none",
                   background: "linear-gradient(135deg, #c0392b, #a02020)",
                   color: "#fff",
-                  fontSize: 14,
+                  fontSize: mobile ? 13 : 14,
                   fontWeight: 700,
                   cursor: "pointer",
                   animation: "pulse 1.5s infinite",
+                  minHeight: 44,
                 }}
               >
-                🀄 Mahjong!
+                Mahjong!
               </button>
             )}
             {concealedKongs.map((refTile, i) => (
@@ -2732,13 +2777,14 @@ export default function MahjongGame() {
                 key={i}
                 onClick={() => handleConcealedKong(refTile)}
                 style={{
-                  padding: "6px 12px",
+                  padding: mobile ? "8px 10px" : "6px 12px",
                   borderRadius: 6,
                   border: "1px solid rgba(201,169,78,0.5)",
                   background: "rgba(201,169,78,0.15)",
                   color: "#c9a94e",
                   fontSize: 12,
                   cursor: "pointer",
+                  minHeight: 44,
                 }}
               >
                 Kong {refTile.label}
@@ -2752,13 +2798,14 @@ export default function MahjongGame() {
                   handleAddToKong(meldIdx, tile.id);
                 }}
                 style={{
-                  padding: "6px 12px",
+                  padding: mobile ? "8px 10px" : "6px 12px",
                   borderRadius: 6,
                   border: "1px solid rgba(201,169,78,0.5)",
                   background: "rgba(201,169,78,0.15)",
                   color: "#c9a94e",
                   fontSize: 12,
                   cursor: "pointer",
+                  minHeight: 44,
                 }}
               >
                 +Kong {tile.label}
@@ -2775,10 +2822,12 @@ export default function MahjongGame() {
               gap: 4,
               marginBottom: 8,
               flexWrap: "wrap",
+              overflowX: mobile ? "auto" : "visible",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {currentPlayer.melds.map((m, i) => (
-              <MeldDisplay key={i} meld={m} />
+              <MeldDisplay key={i} meld={m} mobile={mobile} />
             ))}
           </div>
         )}
@@ -2797,7 +2846,7 @@ export default function MahjongGame() {
               Bonus:
             </span>
             {currentPlayer.bonusTiles.map((t) => (
-              <Tile key={t.id} tile={t} small />
+              <Tile key={t.id} tile={t} small mobile={mobile} />
             ))}
           </div>
         )}
@@ -2806,10 +2855,14 @@ export default function MahjongGame() {
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
+            flexWrap: mobile ? "nowrap" : "wrap",
             gap: 2,
             alignItems: "flex-end",
-            justifyContent: "center",
+            justifyContent: mobile ? "flex-start" : "center",
+            overflowX: mobile ? "auto" : "visible",
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: mobile ? 4 : 0,
+            scrollbarWidth: "thin",
           }}
         >
           {currentPlayer.hand
@@ -2822,6 +2875,7 @@ export default function MahjongGame() {
                 onClick={() =>
                   setSelectedTile(selectedTile === t.id ? null : t.id)
                 }
+                mobile={mobile}
               />
             ))}
           {state.drawnTile &&
@@ -2832,11 +2886,12 @@ export default function MahjongGame() {
                 <div
                   style={{
                     width: 2,
-                    height: 50,
+                    height: mobile ? 40 : 50,
                     background: "rgba(201,169,78,0.3)",
                     margin: "0 4px",
                     alignSelf: "center",
                     borderRadius: 1,
+                    flexShrink: 0,
                   }}
                 />
                 <Tile
@@ -2850,6 +2905,7 @@ export default function MahjongGame() {
                     )
                   }
                   highlighted
+                  mobile={mobile}
                 />
               </>
             )}
@@ -2857,19 +2913,20 @@ export default function MahjongGame() {
 
         {/* Discard button */}
         {selectedTile !== null && (
-          <div style={{ textAlign: "center", marginTop: 12 }}>
+          <div style={{ textAlign: "center", marginTop: mobile ? 8 : 12 }}>
             <button
               onClick={handleDiscard}
               style={{
-                padding: "10px 32px",
+                padding: mobile ? "12px 40px" : "10px 32px",
                 borderRadius: 8,
                 border: "none",
                 background: "linear-gradient(135deg, #c9a94e 0%, #a88a30 100%)",
                 color: "#1a3c2a",
-                fontSize: 15,
+                fontSize: mobile ? 16 : 15,
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: "'Noto Serif', serif",
+                minHeight: 48,
               }}
             >
               Discard
@@ -2889,7 +2946,7 @@ export default function MahjongGame() {
       {/* State code panel */}
       <StateCodePanel state={state} />
 
-      {/* Pulse animation */}
+      {/* Pulse animation & mobile styles */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -2897,10 +2954,22 @@ export default function MahjongGame() {
         }
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Noto+Serif:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { height: 100vh; height: -webkit-fill-available; }
         body {
           margin: 0;
           background: #0d2818;
           -webkit-tap-highlight-color: transparent;
+          overscroll-behavior: none;
+          min-height: 100vh;
+          min-height: -webkit-fill-available;
+        }
+        /* Hide scrollbars on mobile but keep scroll functional */
+        @media (max-width: 600px) {
+          ::-webkit-scrollbar { height: 3px; width: 3px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          ::-webkit-scrollbar-thumb { background: rgba(201,169,78,0.3); border-radius: 2px; }
+          button:active { opacity: 0.8; transform: scale(0.97); }
+          input, textarea { font-size: 16px !important; }
         }
       `}</style>
     </div>
